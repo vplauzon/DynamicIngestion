@@ -10,19 +10,23 @@ namespace SimulationConsole
     {
         #region Properties
         public Uri SourceBlobPrefixUri { get; }
+        
+        public int? SourceCount { get; }
         #endregion
 
         #region Constructors
         public static RunSettings FromEnvironmentVariables()
         {
             var sourceBlobPrefixUri = GetUri("SourceBlobPrefix");
+            var sourceCount = GetInt("SourceCount", false);
 
-            return new RunSettings(sourceBlobPrefixUri);
+            return new RunSettings(sourceBlobPrefixUri, sourceCount);
         }
 
-        public RunSettings(Uri sourceBlobPrefixUri)
+        public RunSettings(Uri sourceBlobPrefixUri, int? sourceCount)
         {
             SourceBlobPrefixUri = sourceBlobPrefixUri;
+            SourceCount = sourceCount;
         }
         #endregion
 
