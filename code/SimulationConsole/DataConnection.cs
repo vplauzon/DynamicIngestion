@@ -2,26 +2,31 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Specialized;
 using System.Collections.Immutable;
+using System.Data;
 
 namespace SimulationConsole
 {
     internal class DataConnection
     {
+        private readonly Random _random = new();
         private readonly IImmutableList<Uri> _blobUris;
+        private readonly IIngestionQueue _queue;
 
         #region Constructors
-        private DataConnection(IImmutableList<Uri> blobUris)
+        private DataConnection(IImmutableList<Uri> blobUris, IIngestionQueue queue)
         {
             _blobUris = blobUris;
+            _queue = queue;
         }
 
         public static async Task<DataConnection> CreateDataConnectionAsync(
             Uri sourceBlobPrefixUri,
-            int? sourceCount)
+            int? sourceCount,
+            IIngestionQueue queue)
         {
             var blobUris = await FetchBlobUrisAsync(sourceBlobPrefixUri, sourceCount);
 
-            return new DataConnection(blobUris.ToImmutableArray());
+            return new DataConnection(blobUris.ToImmutableArray(), queue);
         }
 
         private static async Task<IEnumerable<Uri>> FetchBlobUrisAsync(
@@ -59,5 +64,32 @@ namespace SimulationConsole
             return blobUris;
         }
         #endregion
+
+        public async Task RunAsync(TimeSpan duration)
+        {
+            var startTime = DateTime.Now;
+            var endTime = startTime.Add(duration);
+
+            while (DateTime.Now < endTime)
+            {
+                _queue.PushUri(RandomUri(), RandomAge());
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
+        }
+
+        private Uri RandomUri()
+        {
+            var index = _random.Next(_blobUris.Count());
+
+            return _blobUris[index];
+        }
+
+        private TimeSpan RandomAge()
+        {
+            var randomValue = _random.NextDouble()*10;
+            var squashedValue = Math.Pow(randomValue, 6)/1000000*3;
+
+            return TimeSpan.FromSeconds(squashedValue);
+        }
     }
 }

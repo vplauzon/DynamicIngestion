@@ -8,9 +8,13 @@
 
             runSettings.WriteOutSettings();
 
+            var aggregator = new Aggregator();
             var dataConnection = await DataConnection.CreateDataConnectionAsync(
                 runSettings.SourceBlobPrefixUri,
-                runSettings.SourceCount);
+                runSettings.SourceCount,
+                aggregator);
+
+            await dataConnection.RunAsync(TimeSpan.FromMinutes(5));
         }
     }
 }
