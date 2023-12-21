@@ -72,7 +72,7 @@ namespace SimulationConsole
 
             while (DateTime.Now < endTime)
             {
-                _queue.PushUri(RandomUri(), RandomAge());
+                _queue.PushUri(RandomUri(), DateTime.Now.Subtract(RandomAge()));
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
         }
@@ -86,8 +86,8 @@ namespace SimulationConsole
 
         private TimeSpan RandomAge()
         {
-            var randomValue = _random.NextDouble()*10;
-            var squashedValue = Math.Pow(randomValue, 6)/1000000*3;
+            var randomValue = _random.NextDouble() * 10;
+            var squashedValue = Math.Pow(randomValue, 6) / 1000000 * 3;
 
             return TimeSpan.FromSeconds(squashedValue);
         }
