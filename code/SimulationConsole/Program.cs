@@ -2,13 +2,13 @@
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             var runSettings = RunSettings.FromEnvironmentVariables();
 
             runSettings.WriteOutSettings();
 
-            var dataConnection = DataConnection.CreateDataConnectionAsync(
+            var dataConnection = await DataConnection.CreateDataConnectionAsync(
                 runSettings.SourceBlobPrefixUri,
                 runSettings.SourceCount);
         }
