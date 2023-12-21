@@ -28,6 +28,7 @@ namespace SimulationConsole
 
             await foreach (var item in pageableItems)
             {
+                var name = item.Name;
                 //blobUris.Add(item.Name);
                 if (sourceCount != null
                     && blobUris.Count >= sourceCount)
