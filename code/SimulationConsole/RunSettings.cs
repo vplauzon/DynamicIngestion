@@ -10,8 +10,10 @@ namespace SimulationConsole
     {
         #region Properties
         public Uri SourceBlobPrefixUri { get; }
-        
+
         public int? SourceCount { get; }
+
+        public Uri ClusterUri { get; }
         #endregion
 
         #region Constructors
@@ -19,14 +21,16 @@ namespace SimulationConsole
         {
             var sourceBlobPrefixUri = GetUri("SourceBlobPrefix");
             var sourceCount = GetInt("SourceCount", false);
+            var clusterUri = GetUri("ClusterUri");
 
-            return new RunSettings(sourceBlobPrefixUri, sourceCount);
+            return new RunSettings(sourceBlobPrefixUri, sourceCount, clusterUri);
         }
 
-        public RunSettings(Uri sourceBlobPrefixUri, int? sourceCount)
+        public RunSettings(Uri sourceBlobPrefixUri, int? sourceCount, Uri clusterUri)
         {
             SourceBlobPrefixUri = sourceBlobPrefixUri;
             SourceCount = sourceCount;
+            ClusterUri = clusterUri;
         }
         #endregion
 
