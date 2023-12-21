@@ -17,7 +17,10 @@ namespace SimulationConsole
             Uri sourceBlobPrefixUri,
             int? sourceCount)
         {
-            var prefixClient = new BlockBlobClient(sourceBlobPrefixUri);
+            var credentials = new AzureSasCredential(sourceBlobPrefixUri.Query);
+            var prefixClient = new BlockBlobClient(
+                new Uri(sourceBlobPrefixUri.GetLeftPart(UriPartial.Path)),
+                credentials);
             var containerClient = prefixClient.GetParentBlobContainerClient();
             var prefixInContainer = string.Join(
                 string.Empty,
