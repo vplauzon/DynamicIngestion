@@ -19,11 +19,11 @@ namespace SimulationConsole
         {
             var prefixClient = new BlockBlobClient(sourceBlobPrefixUri);
             var containerClient = prefixClient.GetParentBlobContainerClient();
-            var prefix = prefixClient.Uri.ToString().Substring(
-                0,
-                containerClient.Uri.ToString().Length);
+            var prefixInContainer = string.Join(
+                string.Empty,
+                sourceBlobPrefixUri.Segments.Skip(2));
             var pageableItems = containerClient.GetBlobsAsync(
-                prefix: prefix);
+                prefix: prefixInContainer);
             var blobUris = new List<Uri>();
 
             await foreach (var item in pageableItems)
