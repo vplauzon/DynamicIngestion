@@ -9,7 +9,7 @@ namespace SimulationConsole
 {
     internal partial class Aggregator : IIngestionQueue
     {
-        private readonly ConcurrentQueue<BlobItem> _queue = new();
+        private readonly ConcurrentQueue<BlobItem> _aggregatorQueue = new();
         private readonly TimeSpan _sloTime;
         private readonly Estimator _estimator;
         private readonly IBatchIngestionQueue _batchIngestionQueue;
@@ -41,7 +41,7 @@ namespace SimulationConsole
 
         void IIngestionQueue.Push(BlobItem item)
         {
-            _queue.Enqueue(item);
+            _aggregatorQueue.Enqueue(item);
         }
 
         public async Task RunAsync()
@@ -59,9 +59,10 @@ namespace SimulationConsole
 
                     if (estimatedIngestionTime + maxAge > _sloTime)
                     {
+                        PushBatch(currentBatch);
                     }
                 }
-                if (_queue.TryDequeue(out var item))
+                if (_aggregatorQueue.TryDequeue(out var item))
                 {
                     currentBatch.Add(item);
                 }
@@ -75,6 +76,34 @@ namespace SimulationConsole
         public void Complete()
         {
             _isCompleting = true;
+        }
+
+        private void PushBatch(List<BlobItem> batch)
+        {
+            var itemCount = 0;
+            var totalEstimatedIngestionTime = TimeSpan.Zero;
+
+            //  Inplace sort:  put oldest items at the end
+            batch.Sort((x, y) => x.eventStart.CompareTo(y.eventStart));
+
+            while (itemCount < batch.Count)
+            {
+                var estimatedIngestionTime = _estimator.EstimateTime(
+                    batch[batch.Count - 1 - itemCount].size);
+
+                if (itemCount == 0
+                    || totalEstimatedIngestionTime + estimatedIngestionTime <= _sloTime)
+                {   //  Will send the item
+                    ++itemCount;
+                    totalEstimatedIngestionTime += estimatedIngestionTime;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            _batchIngestionQueue.Push(batch.Skip(batch.Count - itemCount));
+            batch.RemoveRange(batch.Count - itemCount, itemCount);
         }
     }
 }

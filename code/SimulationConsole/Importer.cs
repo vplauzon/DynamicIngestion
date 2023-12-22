@@ -7,12 +7,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Kusto.Cloud.Platform.Data;
-using Azure.Identity;
+using System.Collections.Immutable;
+using System.Collections.Concurrent;
 
 namespace SimulationConsole
 {
     internal class Importer : IBatchIngestionQueue
     {
+        private readonly ConcurrentQueue<IImmutableList<BlobItem>> _importerQueue = new();
         private readonly ICslAdminProvider _kustoProvider;
         private readonly Estimator _estimator;
         private readonly StreamingLogger _logger;
@@ -45,9 +47,15 @@ namespace SimulationConsole
         {
             var ingestionCapacity = await FetchIngestionCapacityAsync();
 
-            while (_isCompleting)
+            while (!_isCompleting)
             {
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                if (_importerQueue.TryDequeue(out var items))
+                {
+                }
+                else
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                }
             }
         }
 
@@ -58,7 +66,7 @@ namespace SimulationConsole
 
         void IBatchIngestionQueue.Push(IEnumerable<BlobItem> items)
         {
-            throw new NotImplementedException();
+            _importerQueue.Enqueue(items.ToImmutableArray());
         }
 
         private async Task<int> FetchIngestionCapacityAsync()
