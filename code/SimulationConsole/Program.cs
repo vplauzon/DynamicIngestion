@@ -18,12 +18,14 @@ namespace SimulationConsole
             var estimator = new Estimator();
             var importer = Importer.CreateImporter(
                 connectionStringBuilder,
-                estimator);
-            var aggregator = Aggregator.CreateAggregator(estimator);
+                estimator,
+                logger);
+            var aggregator = Aggregator.CreateAggregator(estimator, logger);
             var dataConnection = await DataConnection.CreateDataConnectionAsync(
                 runSettings.SourceBlobPrefixUri,
                 runSettings.SourceCount,
-                aggregator);
+                aggregator,
+                logger);
             var importerTask = importer.RunAsync();
             var aggregatorTask = aggregator.RunAsync();
             var dataConnectionTask = dataConnection.RunAsync(TimeSpan.FromMinutes(5));
@@ -33,6 +35,7 @@ namespace SimulationConsole
             aggregator.Complete();
             await aggregatorTask;
             await importerTask;
+            await logger.CompleteAsync();
         }
     }
 }

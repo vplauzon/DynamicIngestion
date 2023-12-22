@@ -15,22 +15,28 @@ namespace SimulationConsole
         private readonly Random _random = new();
         private readonly IImmutableList<BlobInfo> _blobInfos;
         private readonly IIngestionQueue _queue;
+        private readonly StreamingLogger _logger;
 
         #region Constructors
-        private DataConnection(IImmutableList<BlobInfo> blobInfos, IIngestionQueue queue)
+        private DataConnection(
+            IImmutableList<BlobInfo> blobInfos,
+            IIngestionQueue queue,
+            StreamingLogger logger)
         {
             _blobInfos = blobInfos;
             _queue = queue;
+            _logger = logger;
         }
 
         public static async Task<DataConnection> CreateDataConnectionAsync(
             Uri sourceBlobPrefixUri,
             int? sourceCount,
-            IIngestionQueue queue)
+            IIngestionQueue queue,
+            StreamingLogger logger)
         {
             var blobUris = await FetchBlobInfosAsync(sourceBlobPrefixUri, sourceCount);
 
-            return new DataConnection(blobUris.ToImmutableArray(), queue);
+            return new DataConnection(blobUris.ToImmutableArray(), queue, logger);
         }
 
         private static async Task<IEnumerable<BlobInfo>> FetchBlobInfosAsync(

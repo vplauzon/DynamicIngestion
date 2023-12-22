@@ -15,23 +15,29 @@ namespace SimulationConsole
     {
         private readonly ICslAdminProvider _kustoProvider;
         private readonly Estimator _estimator;
+        private readonly StreamingLogger _logger;
         private bool _isCompleting = false;
 
         #region Constructors
-        private Importer(ICslAdminProvider kustoProvider, Estimator estimator)
+        private Importer(
+            ICslAdminProvider kustoProvider,
+            Estimator estimator,
+            StreamingLogger logger)
         {
             _kustoProvider = kustoProvider;
             _estimator = estimator;
+            _logger = logger;
         }
 
         public static Importer CreateImporter(
             KustoConnectionStringBuilder connectionStringBuilder,
-            Estimator estimator)
+            Estimator estimator,
+            StreamingLogger logger)
         {
             var kustoProvider = KustoClientFactory.CreateCslAdminProvider(
                 connectionStringBuilder);
 
-            return new Importer(kustoProvider, estimator);
+            return new Importer(kustoProvider, estimator, logger);
         }
         #endregion
 

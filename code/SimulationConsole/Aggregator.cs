@@ -15,17 +15,19 @@ namespace SimulationConsole
 
         private readonly ConcurrentQueue<QueueItem> _queue = new();
         private readonly Estimator _estimator;
+        private readonly StreamingLogger _logger;
         private bool _isCompleting = false;
 
         #region Constructors
-        private Aggregator(Estimator estimator)
+        private Aggregator(Estimator estimator, StreamingLogger logger)
         {
             _estimator = estimator;
+            _logger = logger;
         }
 
-        public static Aggregator CreateAggregator(Estimator estimator)
+        public static Aggregator CreateAggregator(Estimator estimator, StreamingLogger logger)
         {
-            return new Aggregator(estimator);
+            return new Aggregator(estimator, logger);
         }
         #endregion
 
