@@ -18,22 +18,26 @@ namespace SimulationConsole
 
         private readonly ConcurrentQueue<QueueItem> _queue = new();
         private readonly ICslAdminProvider _kustoProvider;
+        private readonly Estimator _estimator;
         private bool _isCompleting = false;
 
         #region Constructors
-        private Aggregator(ICslAdminProvider kustoProvider)
+        private Aggregator(ICslAdminProvider kustoProvider, Estimator estimator)
         {
             _kustoProvider = kustoProvider;
+            _estimator = estimator;
         }
 
-        public static async Task<Aggregator> CreateAggregatorAsync(Uri clusterUri)
+        public static async Task<Aggregator> CreateAggregatorAsync(
+            Uri clusterUri,
+            Estimator estimator)
         {
             var connectionStringBuilder = new KustoConnectionStringBuilder(clusterUri.ToString())
                 .WithAadAzCliAuthentication();
             var kustoProvider = KustoClientFactory.CreateCslAdminProvider(
                 connectionStringBuilder);
 
-            return new Aggregator(kustoProvider);
+            return new Aggregator(kustoProvider, estimator);
         }
         #endregion
 
@@ -44,7 +48,9 @@ namespace SimulationConsole
 
         public async Task RunAsync()
         {
-            while (_isCompleting)
+            var currentBatch = new List<QueueItem>();
+
+            while (!_isCompleting)
             {
                 while (_queue.TryDequeue(out var item))
                 {

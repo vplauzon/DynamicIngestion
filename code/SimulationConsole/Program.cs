@@ -8,7 +8,10 @@
 
             runSettings.WriteOutSettings();
 
-            var aggregator = await Aggregator.CreateAggregatorAsync(runSettings.ClusterUri);
+            var estimator = new Estimator();
+            var aggregator = await Aggregator.CreateAggregatorAsync(
+                runSettings.ClusterUri,
+                estimator);
             var dataConnection = await DataConnection.CreateDataConnectionAsync(
                 runSettings.SourceBlobPrefixUri,
                 runSettings.SourceCount,
