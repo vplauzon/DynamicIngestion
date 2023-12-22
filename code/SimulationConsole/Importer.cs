@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Kusto.Cloud.Platform.Data;
 using System.Collections.Immutable;
 using System.Collections.Concurrent;
+using System.Data;
 
 namespace SimulationConsole
 {
@@ -46,15 +47,23 @@ namespace SimulationConsole
         public async Task RunAsync()
         {
             var ingestionCapacity = await FetchIngestionCapacityAsync();
+            var operationMap = new Dictionary<Guid, IImmutableList<BlobItem>>();
 
             while (!_isCompleting)
             {
-                if (_importerQueue.TryDequeue(out var items))
+                if (operationMap.Count < ingestionCapacity
+                    && _importerQueue.TryDequeue(out var items))
                 {
-                    await PushIngestionAsync(items);
+                    var operationId = await PushIngestionAsync(items);
+
+                    operationMap.Add(operationId, items);
                 }
                 else
                 {
+                    await MonitorOperationsAsync(operationMap);
+                    _logger.Log(
+                        LogLevel.Information,
+                        $"Ingest Capacity Used Length={operationMap.Count}");
                     await Task.Delay(TimeSpan.FromSeconds(1));
                 }
             }
@@ -70,7 +79,66 @@ namespace SimulationConsole
             _importerQueue.Enqueue(items.ToImmutableArray());
         }
 
-        private async Task PushIngestionAsync(IImmutableList<BlobItem> items)
+        private async Task MonitorOperationsAsync(
+            IDictionary<Guid, IImmutableList<BlobItem>> operationMap)
+        {
+            if (operationMap.Any())
+            {
+                var operationIdList = string.Join(
+                    ", ",
+                    operationMap.Keys.Select(id => id.ToString()));
+                var commandText = $@"
+.show operations
+(
+    {operationIdList}
+)
+";
+                var reader = await _kustoProvider.ExecuteControlCommandAsync(
+                    string.Empty,
+                    commandText,
+                    null);
+                var table = reader.ToDataSet().Tables[0];
+                var results = table.Rows
+                    .Cast<DataRow>()
+                    .Select(row => new
+                    {
+                        OperationId = (Guid)row["OperationId"],
+                        Duration = (TimeSpan)row["Duration"],
+                        State = (string)row["State"],
+                        Status = (string)row["Status"],
+                        ShouldRetry = (bool)row["ShouldRetry"]
+                    });
+                var completedOperationIds = new List<Guid>();
+
+                foreach (var result in results)
+                {
+                    switch (result.State)
+                    {
+                        case "InProgress":
+                            break;
+                        case "Completed":
+                            completedOperationIds.Add(result.OperationId);
+                            _logger.Log(
+                                LogLevel.Information,
+                                $"Ingest:  opid={result.OperationId}, "
+                                + $"status=\"{result.Status}\""
+                                + $"duration=\"{result.Duration}\"");
+                            _estimator.AddSizeDataPoint(
+                                operationMap[result.OperationId].Sum(i => i.size),
+                                result.Duration);
+                            operationMap.Remove(result.OperationId);
+                            break;
+                        case "Failed":
+                            throw new InvalidDataException($"Failed ingestion:  {result.Status}");
+
+                        default:
+                            throw new NotImplementedException();
+                    }
+                }
+            }
+        }
+
+        private async Task<Guid> PushIngestionAsync(IImmutableList<BlobItem> items)
         {
             var uriList = string.Join(
                 "," + Environment.NewLine,
@@ -89,7 +157,7 @@ with (format='csv')
             var table = reader.ToDataSet().Tables[0];
             var operationId = (Guid)table.Rows[0][0];
 
-            throw new NotImplementedException();
+            return operationId;
         }
 
         private async Task<int> FetchIngestionCapacityAsync()

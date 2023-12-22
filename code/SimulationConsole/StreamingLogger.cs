@@ -14,7 +14,7 @@ namespace SimulationConsole
     public class StreamingLogger
     {
         #region Inner Types
-        private record LogItem(DateTime timestamp, string level, string eventText);
+        private record LogItem(DateTime timestamp, LogLevel level, string eventText);
         #endregion
 
         private readonly IKustoIngestClient _ingestClient;
@@ -29,9 +29,7 @@ namespace SimulationConsole
             _streamTask = IngestLogsAsync();
         }
 
-        public void Log(
-            string level,
-            string eventText)
+        public void Log(LogLevel level, string eventText)
         {
             _logQueue.Enqueue(new LogItem(DateTime.Now, level, eventText));
         }
@@ -57,7 +55,7 @@ namespace SimulationConsole
                         builder.Append(", ");
                         builder.Append(Environment.MachineName);
                         builder.Append(", ");
-                        builder.Append(item.level);
+                        builder.Append(item.level.ToString());
                         builder.Append(", \"");
                         builder.Append(item.eventText);
                         builder.Append('"');
@@ -74,9 +72,10 @@ namespace SimulationConsole
                             stream,
                             new KustoIngestionProperties()
                             {
+                                DatabaseName = string.Empty,
                                 TableName = "Logs",
                                 Format = DataSourceFormat.csv
-                            });
+                            }); ;
                     }
                 }
             }

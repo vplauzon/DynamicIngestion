@@ -16,5 +16,9 @@ namespace SimulationConsole
         {
             return DurationPerMb.Multiply((double)size / MB);
         }
+
+        public void AddSizeDataPoint(long size, TimeSpan duration)
+        {
+        }
     }
 }
