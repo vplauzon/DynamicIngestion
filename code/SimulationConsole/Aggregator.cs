@@ -1,7 +1,4 @@
-﻿using Kusto.Data;
-using Kusto.Data.Common;
-using Kusto.Data.Net.Client;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,27 +14,18 @@ namespace SimulationConsole
         #endregion
 
         private readonly ConcurrentQueue<QueueItem> _queue = new();
-        private readonly ICslAdminProvider _kustoProvider;
         private readonly Estimator _estimator;
         private bool _isCompleting = false;
 
         #region Constructors
-        private Aggregator(ICslAdminProvider kustoProvider, Estimator estimator)
+        private Aggregator(Estimator estimator)
         {
-            _kustoProvider = kustoProvider;
             _estimator = estimator;
         }
 
-        public static async Task<Aggregator> CreateAggregatorAsync(
-            Uri clusterUri,
-            Estimator estimator)
+        public static Aggregator CreateAggregator(Estimator estimator)
         {
-            var connectionStringBuilder = new KustoConnectionStringBuilder(clusterUri.ToString())
-                .WithAadAzCliAuthentication();
-            var kustoProvider = KustoClientFactory.CreateCslAdminProvider(
-                connectionStringBuilder);
-
-            return new Aggregator(kustoProvider, estimator);
+            return new Aggregator(estimator);
         }
         #endregion
 
