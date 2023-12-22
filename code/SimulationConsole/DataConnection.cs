@@ -1,8 +1,10 @@
 ﻿using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Specialized;
+using System;
 using System.Collections.Immutable;
 using System.Data;
+using System.Drawing;
 
 namespace SimulationConsole
 {
@@ -87,7 +89,10 @@ namespace SimulationConsole
             {
                 var blob = RandomBlob();
 
-                _queue.PushUri(blob.uri, blob.size, DateTime.Now.Subtract(RandomAge()));
+                _queue.Push(new BlobItem(
+                    blob.uri,
+                    blob.size,
+                    DateTime.Now.Subtract(RandomAge())));
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
         }

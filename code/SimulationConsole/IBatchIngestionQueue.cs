@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace SimulationConsole
 {
-    internal interface IIngestionQueue
+    internal interface IBatchIngestionQueue
     {
-        void Push(BlobItem item);
+        void Push(IEnumerable<BlobItem> items);
     }
 }

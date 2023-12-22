@@ -20,7 +20,11 @@ namespace SimulationConsole
                 connectionStringBuilder,
                 estimator,
                 logger);
-            var aggregator = Aggregator.CreateAggregator(estimator, logger);
+            var aggregator = Aggregator.CreateAggregator(
+                runSettings.SloTime,
+                estimator,
+                importer,
+                logger);
             var dataConnection = await DataConnection.CreateDataConnectionAsync(
                 runSettings.SourceBlobPrefixUri,
                 runSettings.SourceCount,

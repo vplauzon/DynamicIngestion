@@ -8,6 +8,13 @@ namespace SimulationConsole
 {
     internal class Estimator
     {
-        public TimeSpan DurationPerMb { get; private set; } = TimeSpan.FromSeconds(0.01);
+        private const long MB = 1024 * 1024;
+
+        public TimeSpan DurationPerMb { get; private set; } = TimeSpan.FromSeconds(1);
+
+        public TimeSpan EstimateTime(long size)
+        {
+            return DurationPerMb.Multiply((double)size / MB);
+        }
     }
 }

@@ -7,45 +7,68 @@ using System.Threading.Tasks;
 
 namespace SimulationConsole
 {
-    internal class Aggregator : IIngestionQueue
+    internal partial class Aggregator : IIngestionQueue
     {
-        #region Inner Types
-        private record QueueItem(Uri uri, long size, DateTime eventStart);
-        #endregion
-
-        private readonly ConcurrentQueue<QueueItem> _queue = new();
+        private readonly ConcurrentQueue<BlobItem> _queue = new();
+        private readonly TimeSpan _sloTime;
         private readonly Estimator _estimator;
+        private readonly IBatchIngestionQueue _batchIngestionQueue;
         private readonly StreamingLogger _logger;
         private bool _isCompleting = false;
 
         #region Constructors
-        private Aggregator(Estimator estimator, StreamingLogger logger)
+        private Aggregator(
+            TimeSpan sloTime,
+            Estimator estimator,
+            IBatchIngestionQueue batchIngestionQueue,
+            StreamingLogger logger)
         {
+            _sloTime = sloTime;
             _estimator = estimator;
+            _batchIngestionQueue = batchIngestionQueue;
             _logger = logger;
         }
 
-        public static Aggregator CreateAggregator(Estimator estimator, StreamingLogger logger)
+        public static Aggregator CreateAggregator(
+            TimeSpan sloTime,
+            Estimator estimator,
+            IBatchIngestionQueue batchIngestionQueue,
+            StreamingLogger logger)
         {
-            return new Aggregator(estimator, logger);
+            return new Aggregator(sloTime, estimator, batchIngestionQueue, logger);
         }
         #endregion
 
-        void IIngestionQueue.PushUri(Uri uri, long size, DateTime eventStart)
+        void IIngestionQueue.Push(BlobItem item)
         {
-            _queue.Enqueue(new QueueItem(uri, size, eventStart));
+            _queue.Enqueue(item);
         }
 
         public async Task RunAsync()
         {
-            var currentBatch = new List<QueueItem>();
+            var currentBatch = new List<BlobItem>();
 
             while (!_isCompleting)
             {
-                while (_queue.TryDequeue(out var item))
+                if (currentBatch.Any())
                 {
+                    var now = DateTime.Now;
+                    var maxAge = currentBatch.Max(i => i.eventStart.Subtract(now));
+                    var totalSize = currentBatch.Sum(i => i.size);
+                    var estimatedIngestionTime = _estimator.EstimateTime(totalSize);
+
+                    if (estimatedIngestionTime + maxAge > _sloTime)
+                    {
+                    }
                 }
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                if (_queue.TryDequeue(out var item))
+                {
+                    currentBatch.Add(item);
+                }
+                else
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                }
             }
         }
 

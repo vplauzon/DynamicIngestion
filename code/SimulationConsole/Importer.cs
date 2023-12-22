@@ -11,7 +11,7 @@ using Azure.Identity;
 
 namespace SimulationConsole
 {
-    internal class Importer
+    internal class Importer : IBatchIngestionQueue
     {
         private readonly ICslAdminProvider _kustoProvider;
         private readonly Estimator _estimator;
@@ -54,6 +54,11 @@ namespace SimulationConsole
         public void Complete()
         {
             _isCompleting = true;
+        }
+
+        void IBatchIngestionQueue.Push(IEnumerable<BlobItem> items)
+        {
+            throw new NotImplementedException();
         }
 
         private async Task<int> FetchIngestionCapacityAsync()

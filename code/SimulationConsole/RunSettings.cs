@@ -9,6 +9,8 @@ namespace SimulationConsole
     public class RunSettings
     {
         #region Properties
+        public TimeSpan SloTime { get; }
+
         public Uri SourceBlobPrefixUri { get; }
 
         public int? SourceCount { get; }
@@ -19,15 +21,21 @@ namespace SimulationConsole
         #region Constructors
         public static RunSettings FromEnvironmentVariables()
         {
+            var sloTime = GetTimeSpan("SloTime");
             var sourceBlobPrefixUri = GetUri("SourceBlobPrefix");
             var sourceCount = GetInt("SourceCount", false);
             var clusterUri = GetUri("ClusterUri");
 
-            return new RunSettings(sourceBlobPrefixUri, sourceCount, clusterUri);
+            return new RunSettings(sloTime, sourceBlobPrefixUri, sourceCount, clusterUri);
         }
 
-        public RunSettings(Uri sourceBlobPrefixUri, int? sourceCount, Uri clusterUri)
+        public RunSettings(
+            TimeSpan sloTime,
+            Uri sourceBlobPrefixUri,
+            int? sourceCount,
+            Uri clusterUri)
         {
+            SloTime = sloTime;
             SourceBlobPrefixUri = sourceBlobPrefixUri;
             SourceCount = sourceCount;
             ClusterUri = clusterUri;
@@ -53,6 +61,43 @@ namespace SimulationConsole
             }
 
             return value;
+        }
+        #endregion
+
+        #region TimeSpan
+        private static TimeSpan GetTimeSpan(string variableName)
+        {
+            var value = GetTimeSpan(variableName, true);
+
+            return value!.Value;
+        }
+
+        private static TimeSpan? GetTimeSpan(string variableName, bool mustExist)
+        {
+            var text = Environment.GetEnvironmentVariable(variableName);
+
+            if (mustExist && text == null)
+            {
+                throw new ArgumentNullException(variableName, "Environment variable missing");
+            }
+
+            if (text != null)
+            {
+                if (TimeSpan.TryParse(text, out var value))
+                {
+                    return value;
+                }
+                else
+                {
+                    throw new ArgumentNullException(
+                        variableName,
+                        $"Unsupported value:  '{text}'");
+                }
+            }
+            else
+            {
+                return null;
+            }
         }
         #endregion
 
