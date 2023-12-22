@@ -8,6 +8,6 @@ namespace SimulationConsole
 {
     internal interface IIngestionQueue
     {
-        void PushUri(Uri uri, DateTime eventStart);
+        void PushUri(Uri uri, long size, DateTime eventStart);
     }
 }

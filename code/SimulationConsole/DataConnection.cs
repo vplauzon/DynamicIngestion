@@ -8,14 +8,18 @@ namespace SimulationConsole
 {
     internal class DataConnection
     {
+        #region Inner Types
+        private record BlobInfo(Uri uri, long size);
+        #endregion
+
         private readonly Random _random = new();
-        private readonly IImmutableList<Uri> _blobUris;
+        private readonly IImmutableList<BlobInfo> _blobInfos;
         private readonly IIngestionQueue _queue;
 
         #region Constructors
-        private DataConnection(IImmutableList<Uri> blobUris, IIngestionQueue queue)
+        private DataConnection(IImmutableList<BlobInfo> blobInfos, IIngestionQueue queue)
         {
-            _blobUris = blobUris;
+            _blobInfos = blobInfos;
             _queue = queue;
         }
 
@@ -24,12 +28,12 @@ namespace SimulationConsole
             int? sourceCount,
             IIngestionQueue queue)
         {
-            var blobUris = await FetchBlobUrisAsync(sourceBlobPrefixUri, sourceCount);
+            var blobUris = await FetchBlobInfosAsync(sourceBlobPrefixUri, sourceCount);
 
             return new DataConnection(blobUris.ToImmutableArray(), queue);
         }
 
-        private static async Task<IEnumerable<Uri>> FetchBlobUrisAsync(
+        private static async Task<IEnumerable<BlobInfo>> FetchBlobInfosAsync(
             Uri sourceBlobPrefixUri,
             int? sourceCount)
         {
@@ -44,15 +48,18 @@ namespace SimulationConsole
             var pageableItems = containerClient
                 .GetBlobsAsync(prefix: prefixInContainer)
                 .AsPages(null, sourceCount);
-            var blobUris = new List<Uri>();
+            var blobUris = new List<BlobInfo>();
 
             await foreach (var page in pageableItems)
             {
                 foreach (var item in page.Values)
                 {
                     var path = $"{containerClient.Uri}/{item.Name}{sourceBlobPrefixUri.Query}";
+                    var info = new BlobInfo(
+                        new Uri(path),
+                        item.Properties.ContentLength!.Value);
 
-                    blobUris.Add(new Uri(path));
+                    blobUris.Add(info);
                 }
                 if (sourceCount != null
                     && blobUris.Count >= sourceCount)
@@ -72,16 +79,18 @@ namespace SimulationConsole
 
             while (DateTime.Now < endTime)
             {
-                _queue.PushUri(RandomUri(), DateTime.Now.Subtract(RandomAge()));
+                var blob = RandomBlob();
+
+                _queue.PushUri(blob.uri, blob.size, DateTime.Now.Subtract(RandomAge()));
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
         }
 
-        private Uri RandomUri()
+        private BlobInfo RandomBlob()
         {
-            var index = _random.Next(_blobUris.Count());
+            var index = _random.Next(_blobInfos.Count());
 
-            return _blobUris[index];
+            return _blobInfos[index];
         }
 
         private TimeSpan RandomAge()
