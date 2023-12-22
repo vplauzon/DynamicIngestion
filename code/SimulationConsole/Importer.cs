@@ -87,6 +87,7 @@ with (format='csv')
                 commandText,
                 null);
             var table = reader.ToDataSet().Tables[0];
+            var operationId = (Guid)table.Rows[0][0];
 
             throw new NotImplementedException();
         }
