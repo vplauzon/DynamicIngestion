@@ -15,7 +15,9 @@ namespace SimulationConsole
 
         public int? SourceCount { get; }
 
-        public Uri ClusterUri { get; }
+        public Uri KustoClusterUri { get; }
+
+        public string KustoDb { get; }
         #endregion
 
         #region Constructors
@@ -24,21 +26,29 @@ namespace SimulationConsole
             var sloTime = GetTimeSpan("SloTime");
             var sourceBlobPrefixUri = GetUri("SourceBlobPrefix");
             var sourceCount = GetInt("SourceCount", false);
-            var clusterUri = GetUri("ClusterUri");
+            var kustoClusterUri = GetUri("KustoClusterUri");
+            var kustoDb = GetString("KustoDb");
 
-            return new RunSettings(sloTime, sourceBlobPrefixUri, sourceCount, clusterUri);
+            return new RunSettings(
+                sloTime,
+                sourceBlobPrefixUri,
+                sourceCount,
+                kustoClusterUri,
+                kustoDb);
         }
 
         public RunSettings(
             TimeSpan sloTime,
             Uri sourceBlobPrefixUri,
             int? sourceCount,
-            Uri clusterUri)
+            Uri kustoClusterUri,
+            string kustoDb)
         {
             SloTime = sloTime;
             SourceBlobPrefixUri = sourceBlobPrefixUri;
             SourceCount = sourceCount;
-            ClusterUri = clusterUri;
+            KustoClusterUri = kustoClusterUri;
+            KustoDb = kustoDb;
         }
         #endregion
 

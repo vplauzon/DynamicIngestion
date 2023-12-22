@@ -17,6 +17,7 @@ namespace SimulationConsole
     {
         private readonly ConcurrentQueue<IImmutableList<BlobItem>> _importerQueue = new();
         private readonly ICslAdminProvider _kustoProvider;
+        private readonly string _database;
         private readonly Estimator _estimator;
         private readonly StreamingLogger _logger;
         private bool _isCompleting = false;
@@ -24,23 +25,26 @@ namespace SimulationConsole
         #region Constructors
         private Importer(
             ICslAdminProvider kustoProvider,
+            string database,
             Estimator estimator,
             StreamingLogger logger)
         {
             _kustoProvider = kustoProvider;
+            _database = database;
             _estimator = estimator;
             _logger = logger;
         }
 
         public static Importer CreateImporter(
             KustoConnectionStringBuilder connectionStringBuilder,
+            string database,
             Estimator estimator,
             StreamingLogger logger)
         {
             var kustoProvider = KustoClientFactory.CreateCslAdminProvider(
                 connectionStringBuilder);
 
-            return new Importer(kustoProvider, estimator, logger);
+            return new Importer(kustoProvider, database, estimator, logger);
         }
         #endregion
 
@@ -121,7 +125,7 @@ namespace SimulationConsole
                             _logger.Log(
                                 LogLevel.Information,
                                 $"Ingest:  opid={result.OperationId}, "
-                                + $"status=\"{result.Status}\""
+                                + $"status=\"{result.Status}\", "
                                 + $"duration=\"{result.Duration}\"");
                             _estimator.AddSizeDataPoint(
                                 operationMap[result.OperationId].Sum(i => i.size),
@@ -151,7 +155,7 @@ namespace SimulationConsole
 with (format='csv')
 ";
             var reader = await _kustoProvider.ExecuteControlCommandAsync(
-                string.Empty,
+                _database,
                 commandText,
                 null);
             var table = reader.ToDataSet().Tables[0];

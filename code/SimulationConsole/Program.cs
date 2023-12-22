@@ -12,12 +12,13 @@ namespace SimulationConsole
             runSettings.WriteOutSettings();
 
             var connectionStringBuilder = new KustoConnectionStringBuilder(
-                runSettings.ClusterUri.ToString())
+                runSettings.KustoClusterUri.ToString())
                 .WithAadAzureTokenCredentialsAuthentication(new DefaultAzureCredential());
-            var logger = new StreamingLogger(connectionStringBuilder);
+            var logger = new StreamingLogger(connectionStringBuilder, runSettings.KustoDb);
             var estimator = new Estimator();
             var importer = Importer.CreateImporter(
                 connectionStringBuilder,
+                runSettings.KustoDb,
                 estimator,
                 logger);
             var aggregator = Aggregator.CreateAggregator(

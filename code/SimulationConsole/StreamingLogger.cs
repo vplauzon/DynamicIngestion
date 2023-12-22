@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace SimulationConsole
@@ -17,13 +18,27 @@ namespace SimulationConsole
         private record LogItem(DateTime timestamp, LogLevel level, string eventText);
         #endregion
 
-        private readonly IKustoIngestClient _ingestClient;
+        private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
+        {
+            WriteIndented = false
+        };
         private readonly ConcurrentQueue<LogItem> _logQueue = new();
+        private readonly KustoIngestionProperties _ingestionProperties;
+        private readonly IKustoIngestClient _ingestClient;
         private readonly Task _streamTask;
         private bool _isCompleting = false;
 
-        public StreamingLogger(KustoConnectionStringBuilder connectionStringBuilder)
+        public StreamingLogger(
+            KustoConnectionStringBuilder connectionStringBuilder,
+            string database)
         {
+            _ingestionProperties = new()
+            {
+                IgnoreFirstRecord = false,
+                DatabaseName = database,
+                TableName = "Logs",
+                Format = DataSourceFormat.json
+            };
             _ingestClient =
                 KustoIngestFactory.CreateStreamingIngestClient(connectionStringBuilder);
             _streamTask = IngestLogsAsync();
@@ -44,38 +59,26 @@ namespace SimulationConsole
         {
             while (!_isCompleting)
             {
-                await Task.Delay(TimeSpan.FromSeconds(5));
+                await Task.Delay(TimeSpan.FromSeconds(1));
                 if (_logQueue.Any())
                 {
-                    var builder = new StringBuilder();
-
-                    while (_logQueue.TryDequeue(out var item))
-                    {
-                        builder.Append(item.timestamp);
-                        builder.Append(", ");
-                        builder.Append(Environment.MachineName);
-                        builder.Append(", ");
-                        builder.Append(item.level.ToString());
-                        builder.Append(", \"");
-                        builder.Append(item.eventText);
-                        builder.Append('"');
-                        builder.AppendLine();
-                    }
-
                     using (var stream = new MemoryStream())
-                    using (var writer = new StreamWriter(stream))
                     {
-                        writer.Write(builder);
-                        writer.Flush();
-                        stream.Position = 0;
-                        await _ingestClient.IngestFromStreamAsync(
-                            stream,
-                            new KustoIngestionProperties()
+                        while (_logQueue.TryDequeue(out var item))
+                        {
+                            var jsonObj = new
                             {
-                                DatabaseName = string.Empty,
-                                TableName = "Logs",
-                                Format = DataSourceFormat.csv
-                            }); ;
+                                Timestamp = item.timestamp,
+                                Source = Environment.MachineName,
+                                Level = item.level.ToString(),
+                                EventText = item.eventText
+                            };
+                            JsonSerializer.Serialize(stream, jsonObj, _jsonOptions);
+                            stream.WriteByte((byte)'\n');
+                        }
+
+                        stream.Position = 0;
+                        await _ingestClient.IngestFromStreamAsync(stream, _ingestionProperties);
                     }
                 }
             }
