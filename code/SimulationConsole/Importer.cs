@@ -60,9 +60,9 @@ namespace SimulationConsole
 | project Total",
                 null);
             var table = reader.ToDataSet().Tables[0];
-            var ingestionCapacity = (int)table.Rows[0][0];
+            var ingestionCapacity = (long)table.Rows[0][0];
 
-            return ingestionCapacity;
+            return (int)ingestionCapacity;
         }
     }
 }
