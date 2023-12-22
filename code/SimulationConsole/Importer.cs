@@ -51,6 +51,7 @@ namespace SimulationConsole
             {
                 if (_importerQueue.TryDequeue(out var items))
                 {
+                    await PushIngestionAsync(items);
                 }
                 else
                 {
@@ -67,6 +68,27 @@ namespace SimulationConsole
         void IBatchIngestionQueue.Push(IEnumerable<BlobItem> items)
         {
             _importerQueue.Enqueue(items.ToImmutableArray());
+        }
+
+        private async Task PushIngestionAsync(IImmutableList<BlobItem> items)
+        {
+            var uriList = string.Join(
+                "," + Environment.NewLine,
+                items.Select(i => $"@'{i.uri}'"));
+            var commandText = $@"
+.ingest async into table IngestTest
+(
+    {uriList}
+)
+with (format='csv')
+";
+            var reader = await _kustoProvider.ExecuteControlCommandAsync(
+                string.Empty,
+                commandText,
+                null);
+            var table = reader.ToDataSet().Tables[0];
+
+            throw new NotImplementedException();
         }
 
         private async Task<int> FetchIngestionCapacityAsync()
