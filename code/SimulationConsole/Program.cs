@@ -1,4 +1,7 @@
-﻿namespace SimulationConsole
+﻿using Azure.Identity;
+using Kusto.Data;
+
+namespace SimulationConsole
 {
     internal class Program
     {
@@ -8,9 +11,13 @@
 
             runSettings.WriteOutSettings();
 
+            var connectionStringBuilder = new KustoConnectionStringBuilder(
+                runSettings.ClusterUri.ToString())
+                .WithAadAzureTokenCredentialsAuthentication(new DefaultAzureCredential());
+            var logger = new StreamingLogger(connectionStringBuilder);
             var estimator = new Estimator();
             var importer = Importer.CreateImporter(
-                runSettings.ClusterUri,
+                connectionStringBuilder,
                 estimator);
             var aggregator = Aggregator.CreateAggregator(estimator);
             var dataConnection = await DataConnection.CreateDataConnectionAsync(

@@ -25,11 +25,9 @@ namespace SimulationConsole
         }
 
         public static Importer CreateImporter(
-            Uri clusterUri,
+            KustoConnectionStringBuilder connectionStringBuilder,
             Estimator estimator)
         {
-            var connectionStringBuilder = new KustoConnectionStringBuilder(clusterUri.ToString())
-                .WithAadAzureTokenCredentialsAuthentication(new DefaultAzureCredential());
             var kustoProvider = KustoClientFactory.CreateCslAdminProvider(
                 connectionStringBuilder);
 
