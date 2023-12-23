@@ -52,8 +52,8 @@ namespace SimulationConsole
             {
                 if (currentBatch.Any())
                 {
-                    var now = DateTime.Now;
-                    var maxAge = currentBatch.Max(i => i.eventStart.Subtract(now));
+                    var now = DateTime.Now.ToUniversalTime();
+                    var maxAge = currentBatch.Max(i => now.Subtract(i.eventStart));
                     var totalSize = currentBatch.Sum(i => i.size);
                     var estimatedIngestionTime = _estimator.EstimateTime(totalSize);
 
