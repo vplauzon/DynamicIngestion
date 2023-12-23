@@ -88,22 +88,36 @@ namespace SimulationConsole
 
             while (DateTime.Now < endTime)
             {
-                var blob = RandomBlob();
-                var item = new BlobItem(
-                    blob.uri,
-                    blob.size,
-                    DateTime.Now.ToUtc().Subtract(RandomAge()));
+                var delay = TimeSpan.FromSeconds(
+                    1 - (DateTime.Now - startTime) / (endTime - startTime));
 
-                _logger.Log(
-                    LogLevel.Information,
-                    $"Discovered blob:  id={item.ItemId}, uri={item.uri}, "
-                    + $"eventStart={item.eventStart}, size={item.size}");
-                _queue.Push(item);
+                PushRandomItem();
+                if (_random.Next(100) > 96)
+                {
+                    for (int i = 0; i != 5; ++i)
+                    {
+                        PushRandomItem();
+                    }
+                }
                 //  We want to start with 1 second between each
                 //  Increase linearly to no delay
-                await Task.Delay(TimeSpan.FromSeconds(
-                    1 - (DateTime.Now - startTime) / (endTime - startTime)));
+                await Task.Delay(delay);
             }
+        }
+
+        private void PushRandomItem()
+        {
+            var blob = RandomBlob();
+            var item = new BlobItem(
+                blob.uri,
+                blob.size,
+                DateTime.Now.ToUtc().Subtract(RandomAge()));
+
+            _logger.Log(
+                LogLevel.Information,
+                $"Discovered blob:  id={item.ItemId}, uri={item.uri}, "
+                + $"eventStart={item.eventStart}, size={item.size}");
+            _queue.Push(item);
         }
 
         private BlobInfo RandomBlob()
