@@ -15,7 +15,7 @@ namespace SimulationConsole
                 runSettings.KustoClusterUri.ToString())
                 .WithAadAzureTokenCredentialsAuthentication(new DefaultAzureCredential());
             var logger = new StreamingLogger(connectionStringBuilder, runSettings.KustoDb);
-            var estimator = new Estimator();
+            var estimator = new Estimator(logger);
             var importer = Importer.CreateImporter(
                 connectionStringBuilder,
                 runSettings.KustoDb,

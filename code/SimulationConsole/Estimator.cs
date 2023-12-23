@@ -9,13 +9,19 @@ namespace SimulationConsole
     internal class Estimator
     {
         #region Inner Types
-        private record DurationPoint(DateTime time, long size, TimeSpan duration);
+        private record DurationPoint(DateTime time, TimeSpan durationPerMb);
         #endregion
 
         private const long MB = 1024 * 1024;
         private static readonly TimeSpan TIME_HORIZON = TimeSpan.FromMinutes(5);
 
         private readonly List<DurationPoint> _durationPoints = new List<DurationPoint>();
+        private readonly StreamingLogger _logger;
+
+        public Estimator(StreamingLogger logger)
+        {
+            _logger = logger;
+        }
 
         public TimeSpan DurationPerMb { get; private set; } = TimeSpan.FromSeconds(1);
 
@@ -29,9 +35,15 @@ namespace SimulationConsole
         /// <param name="duration"></param>
         public void AddSizeDataPoint(long size, TimeSpan duration)
         {
-            _durationPoints.Add(new DurationPoint(DateTime.Now, size, duration));
+            _durationPoints.Add(new DurationPoint(
+                DateTime.Now,
+                duration * ((double)MB / size)));
             CleanSizePoints();
             DurationPerMb = ComputeWeightedAverageTime();
+            _logger.Log(
+                LogLevel.Information,
+                $"Estimator:  size={size}, duration={duration}, "
+                + $"instant={duration * ((double)MB / size)}, new={DurationPerMb}");
         }
 
         private TimeSpan ComputeWeightedAverageTime()
@@ -44,7 +56,7 @@ namespace SimulationConsole
             {
                 var weight = ComputeWeight(now, point.time);
 
-                weightedSum += weight * (point.duration * ((double)MB / point.size));
+                weightedSum += weight * point.durationPerMb;
                 weightSum += weight;
             }
 
