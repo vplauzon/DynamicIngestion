@@ -63,12 +63,26 @@ namespace SimulationConsole
         {
             var ingestionCapacity = await FetchIngestionCapacityAsync();
             var operationMap = new Dictionary<Guid, IImmutableList<BlobItem>>();
+            var isBackLogging = false;
 
             while (!_isCompleting)
             {
+                if (operationMap.Count >= ingestionCapacity
+                    && _importerQueue.Count > 3)
+                {
+                    isBackLogging = true;
+                }
                 if (operationMap.Count < ingestionCapacity
                     && _importerQueue.TryDequeue(out var items))
                 {
+                    if (isBackLogging)
+                    {
+                        isBackLogging = false;
+                        if (_importerQueue.TryDequeue(out var items2))
+                        {
+                            items = items.AddRange(items2);
+                        }
+                    }
                     var operationId = await PushIngestionAsync(items);
 
                     operationMap.Add(operationId, items);
@@ -156,7 +170,7 @@ namespace SimulationConsole
                 + $"itemCount=\"{items.Count}\", "
                 + $"status=\"{result.status}\", "
                 + $"duration=\"{result.duration}\"");
-            foreach(var item in items)
+            foreach (var item in items)
             {
                 _logger.Log(
                     LogLevel.Information,
