@@ -153,6 +153,7 @@ namespace SimulationConsole
             _logger.Log(
                 LogLevel.Information,
                 $"Ingest Op:  opid={result.operationId}, "
+                + $"itemCount=\"{items.Count}\", "
                 + $"status=\"{result.status}\", "
                 + $"duration=\"{result.duration}\"");
             foreach(var item in items)
