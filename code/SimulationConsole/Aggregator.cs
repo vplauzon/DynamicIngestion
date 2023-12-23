@@ -102,7 +102,9 @@ namespace SimulationConsole
                     break;
                 }
             }
-            _batchIngestionQueue.Push(batch.Skip(batch.Count - itemCount));
+            var items = batch.Skip(batch.Count - itemCount);
+
+            _batchIngestionQueue.Push(items);
             batch.RemoveRange(batch.Count - itemCount, itemCount);
         }
     }

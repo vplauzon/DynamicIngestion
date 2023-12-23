@@ -1,6 +1,7 @@
 ﻿using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Specialized;
+using Kusto.Cloud.Platform.Utils;
 using System;
 using System.Collections.Immutable;
 using System.Data;
@@ -88,11 +89,16 @@ namespace SimulationConsole
             while (DateTime.Now < endTime)
             {
                 var blob = RandomBlob();
-
-                _queue.Push(new BlobItem(
+                var item = new BlobItem(
                     blob.uri,
                     blob.size,
-                    DateTime.Now.Subtract(RandomAge())));
+                    DateTime.Now.ToUtc().Subtract(RandomAge()));
+
+                _logger.Log(
+                    LogLevel.Information,
+                    $"Discovered blob:  id={item.ItemId}, uri={item.uri}, "
+                    + $"eventStart={item.eventStart}, size={item.size}");
+                _queue.Push(item);
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
         }

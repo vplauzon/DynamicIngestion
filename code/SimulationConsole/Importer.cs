@@ -10,11 +10,22 @@ using Kusto.Cloud.Platform.Data;
 using System.Collections.Immutable;
 using System.Collections.Concurrent;
 using System.Data;
+using Azure.Storage.Blobs.Models;
 
 namespace SimulationConsole
 {
     internal class Importer : IBatchIngestionQueue
     {
+        #region Inner types
+        private record IngestionResult(
+            Guid operationId,
+            DateTime lastUpdatedOn,
+            TimeSpan duration,
+            string state,
+            string status,
+            bool shouldRetry);
+        #endregion
+
         private readonly ConcurrentQueue<IImmutableList<BlobItem>> _importerQueue = new();
         private readonly ICslAdminProvider _kustoProvider;
         private readonly string _database;
@@ -104,42 +115,62 @@ namespace SimulationConsole
                 var table = reader.ToDataSet().Tables[0];
                 var results = table.Rows
                     .Cast<DataRow>()
-                    .Select(row => new
-                    {
-                        OperationId = (Guid)row["OperationId"],
-                        Duration = (TimeSpan)row["Duration"],
-                        State = (string)row["State"],
-                        Status = (string)row["Status"],
-                        ShouldRetry = (bool)row["ShouldRetry"]
-                    });
+                    .Select(row => new IngestionResult(
+                        (Guid)row["OperationId"],
+                        (DateTime)row["LastUpdatedOn"],
+                        (TimeSpan)row["Duration"],
+                        (string)row["State"],
+                        (string)row["Status"],
+                        (bool)row["ShouldRetry"]));
                 var completedOperationIds = new List<Guid>();
 
                 foreach (var result in results)
                 {
-                    switch (result.State)
+                    switch (result.state)
                     {
                         case "InProgress":
                             break;
                         case "Completed":
-                            completedOperationIds.Add(result.OperationId);
-                            _logger.Log(
-                                LogLevel.Information,
-                                $"Ingest:  opid={result.OperationId}, "
-                                + $"status=\"{result.Status}\", "
-                                + $"duration=\"{result.Duration}\"");
-                            _estimator.AddSizeDataPoint(
-                                operationMap[result.OperationId].Sum(i => i.size),
-                                result.Duration);
-                            operationMap.Remove(result.OperationId);
+                            completedOperationIds.Add(result.operationId);
+                            CompleteBatch(result, operationMap);
                             break;
                         case "Failed":
-                            throw new InvalidDataException($"Failed ingestion:  {result.Status}");
+                            throw new InvalidDataException($"Failed ingestion:  {result.status}");
 
                         default:
                             throw new NotImplementedException();
                     }
                 }
             }
+        }
+
+        private void CompleteBatch(
+            IngestionResult result,
+            IDictionary<Guid, IImmutableList<BlobItem>> operationMap)
+        {
+            var items = operationMap[result.operationId];
+
+            _logger.Log(
+                LogLevel.Information,
+                $"Ingest Op:  opid={result.operationId}, "
+                + $"status=\"{result.status}\", "
+                + $"duration=\"{result.duration}\"");
+            foreach(var item in items)
+            {
+                _logger.Log(
+                    LogLevel.Information,
+                    $"Ingest blob:  opid={result.operationId}, "
+                    + $"itemId=\"{item.ItemId}\", "
+                    + $"uri=\"{item.uri}\", "
+                    + $"size={item.size}, "
+                    + $"eventStart=\"{item.eventStart}\", "
+                    + $"eventEnd=\"{result.lastUpdatedOn}\", "
+                    + $"ingestionDuration=\"{result.duration}\"");
+            }
+            _estimator.AddSizeDataPoint(
+                items.Sum(i => i.size),
+                result.duration);
+            operationMap.Remove(result.operationId);
         }
 
         private async Task<Guid> PushIngestionAsync(IImmutableList<BlobItem> items)
