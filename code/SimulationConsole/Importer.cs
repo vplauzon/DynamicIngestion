@@ -160,12 +160,12 @@ namespace SimulationConsole
                 _logger.Log(
                     LogLevel.Information,
                     $"Ingest blob:  opid={result.operationId}, "
-                    + $"itemId=\"{item.ItemId}\", "
-                    + $"uri=\"{item.uri}\", "
+                    + $"itemId={item.ItemId}, "
+                    + $"uri={item.uri}, "
                     + $"size={item.size}, "
-                    + $"eventStart=\"{item.eventStart}\", "
-                    + $"eventEnd=\"{result.lastUpdatedOn}\", "
-                    + $"ingestionDuration=\"{result.duration}\"");
+                    + $"eventStart={item.eventStart}, "
+                    + $"eventEnd={result.lastUpdatedOn}, "
+                    + $"ingestionDuration={result.duration}");
             }
             _estimator.AddSizeDataPoint(
                 items.Sum(i => i.size),
