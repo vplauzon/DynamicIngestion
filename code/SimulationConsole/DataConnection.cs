@@ -99,7 +99,10 @@ namespace SimulationConsole
                     $"Discovered blob:  id={item.ItemId}, uri={item.uri}, "
                     + $"eventStart={item.eventStart}, size={item.size}");
                 _queue.Push(item);
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                //  We want to start with 1 second between each
+                //  Increase linearly to no delay
+                await Task.Delay(TimeSpan.FromSeconds(
+                    1 - (DateTime.Now - startTime) / (endTime - startTime)));
             }
         }
 
