@@ -36,8 +36,8 @@ namespace SimulationConsole
             var dataConnectionTask = dataConnection.RunAsync(TimeSpan.FromMinutes(5));
 
             await dataConnectionTask;
-            importer.Complete();
             aggregator.Complete();
+            importer.Complete();
             await aggregatorTask;
             await importerTask;
             await logger.CompleteAsync();
