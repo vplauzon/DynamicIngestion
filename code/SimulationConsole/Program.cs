@@ -33,7 +33,7 @@ namespace SimulationConsole
                 logger);
             var importerTask = importer.RunAsync();
             var aggregatorTask = aggregator.RunAsync();
-            var dataConnectionTask = dataConnection.RunAsync(TimeSpan.FromMinutes(5));
+            var dataConnectionTask = dataConnection.RunAsync(TimeSpan.FromMinutes(0.2));
 
             await dataConnectionTask;
             aggregator.Complete();
