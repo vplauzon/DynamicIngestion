@@ -18,6 +18,8 @@ namespace SimulationConsole
         private record LogItem(DateTime timestamp, LogLevel level, string eventText);
         #endregion
 
+        private const int STREAMING_LIMIT = 4 * 1024 * 1024;
+
         private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         {
             WriteIndented = false
@@ -57,14 +59,17 @@ namespace SimulationConsole
 
         private async Task IngestLogsAsync()
         {
-            while (!_isCompleting)
+            while (!_isCompleting || _logQueue.Any())
             {
+                var doContinue = true;
+
                 await Task.Delay(TimeSpan.FromSeconds(1));
-                if (_logQueue.Any())
+                while (doContinue && _logQueue.Any())
                 {
                     using (var stream = new MemoryStream())
                     {
-                        while (_logQueue.TryDequeue(out var item))
+                        while (stream.Length < STREAMING_LIMIT
+                            && _logQueue.TryDequeue(out var item))
                         {
                             var jsonObj = new
                             {
@@ -76,7 +81,7 @@ namespace SimulationConsole
                             JsonSerializer.Serialize(stream, jsonObj, _jsonOptions);
                             stream.WriteByte((byte)'\n');
                         }
-
+                        doContinue = stream.Length >= STREAMING_LIMIT;
                         stream.Position = 0;
                         await _ingestClient.IngestFromStreamAsync(stream, _ingestionProperties);
                     }

@@ -63,24 +63,37 @@ namespace SimulationConsole
         {
             var ingestionCapacity = await FetchIngestionCapacityAsync();
             var operationMap = new Dictionary<Guid, IImmutableList<BlobItem>>();
-            var isBackLogging = false;
 
-            while (!_isCompleting)
+            while (_importerQueue.Any() || operationMap.Any() || !_isCompleting)
             {
-                if (operationMap.Count >= ingestionCapacity
-                    && _importerQueue.Count > 3)
-                {
-                    isBackLogging = true;
-                }
                 if (operationMap.Count < ingestionCapacity
                     && _importerQueue.TryDequeue(out var items))
                 {
-                    if (isBackLogging)
-                    {
-                        isBackLogging = false;
-                        if (_importerQueue.TryDequeue(out var items2))
-                        {
-                            items = items.AddRange(items2);
+                    if (operationMap.Count + 1 == ingestionCapacity)
+                    {   //  Clean operation map to confirm we're at capacity
+                        await MonitorOperationsAsync(operationMap);
+                        if (operationMap.Count + 1 == ingestionCapacity)
+                        {   //  We are at capacity:  flip to backlogging mode
+                            while (_importerQueue.TryPeek(out var peekItems))
+                            {
+                                var totalSize = items
+                                    .Concat(peekItems)
+                                    .Sum(i => i.size);
+                                var estimatedIngestionTime = _estimator.EstimateTime(totalSize);
+
+                                if (estimatedIngestionTime <= TimeSpan.FromMinutes(1))
+                                {
+                                    if (_importerQueue.TryDequeue(out peekItems))
+                                    {
+                                        items = items.AddRange(peekItems);
+                                    }
+                                    else
+                                    {
+                                        throw new NotSupportedException(
+                                            "Inconsistant importer queue");
+                                    }
+                                }
+                            }
                         }
                     }
                     var operationId = await PushIngestionAsync(items);
