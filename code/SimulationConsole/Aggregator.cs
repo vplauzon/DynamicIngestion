@@ -48,7 +48,7 @@ namespace SimulationConsole
         {
             var currentBatch = new List<BlobItem>();
 
-            while (!_isCompleting)
+            while (!_isCompleting || _aggregatorQueue.Any())
             {
                 if (currentBatch.Any())
                 {
@@ -66,10 +66,14 @@ namespace SimulationConsole
                 {
                     currentBatch.Add(item);
                 }
-                else
+                else if (!_isCompleting)
                 {
                     await Task.Delay(TimeSpan.FromSeconds(1));
                 }
+            }
+            if (currentBatch.Any())
+            {
+                PushBatch(currentBatch);
             }
         }
 
